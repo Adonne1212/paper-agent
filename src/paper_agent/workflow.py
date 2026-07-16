@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from paper_agent.audit import audit_draft
+from paper_agent.audit import audit_draft, enrich_audit_with_model
 from paper_agent.drafting import create_draft, revise_draft
 from paper_agent.evidence import build_evidence_cards
 from paper_agent.exporting import export_docx, export_markdown
@@ -105,6 +105,11 @@ class Workflow:
         state = self.store.require()
         examples = self.store.documents_by_role(DocumentRole.EXAMPLE.value)
         report = audit_draft(draft, outline, evidence, examples)
+        if state.assignment_path:
+            assignment = self.store.read_model(
+                self.store.root / state.assignment_path, AssignmentSpec
+            )
+            report = enrich_audit_with_model(report, draft, outline, assignment, self.client)
         path = self.store.artifact_path("audit.json")
         self.store.write_model(path, report)
         state.audit_path = str(path.relative_to(self.store.root))

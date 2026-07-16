@@ -20,7 +20,7 @@ Flower 与 Hayes 的写作过程模型把写作描述为目标导向的问题解
 
 不同学科和任务中的修辞动作存在变化，因此 CARS 不能被机械应用到所有论文。通识论文、综述、调研报告和本科论文需要各自的 Genre Profile，案例 Skill 用于学习目标课程的局部惯例。
 
-工程结论：案例分析应提取“这一部分要完成什么交际目的”，而不只是词频、句长或标题名称；内置规则是可覆盖的后备知识，不是强制统一模板。
+工程结论：案例分析应提取“这一部分要完成什么交际目的”，而不只是词频、句长或标题名称；内置规则是可覆盖的后备知识，不是强制统一模板。v0.2 将这些目的保存为每节显式修辞动作，并作为规划、起草和质量评价的共同合同。
 
 参考：
 
@@ -32,7 +32,7 @@ Flower 与 Hayes 的写作过程模型把写作描述为目标导向的问题解
 
 Toulmin 的实践论证框架区分 Claim、Ground/Data、Warrant、Backing、Qualifier 与 Rebuttal。对本项目最重要的是：列出证据并不自动构成论证，写作者必须说明从证据到主张的推理依据，并控制主张强度、处理适用条件和可能的反驳。
 
-工程结论：内部论证对象至少包括 `Claim → Evidence/Ground → Warrant`，并可附 `Backing`、`Qualifier`、`Counterargument/Rebuttal`。Agent 在写段落前检查支撑链，在审计阶段检查证据是否真的支持对应主张。
+工程结论：内部论证对象至少包括 `Claim → Evidence/Ground → Warrant`，并可附 `Backing`、`Qualifier`、`Counterargument/Rebuttal`。v0.2 在每节提纲中保存 `claims`、`evidence_ids`、`counterargument` 和 `evidence_gap`，起草提示要求把证据与论证担保分开表达。
 
 参考：
 

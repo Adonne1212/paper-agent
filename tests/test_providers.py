@@ -61,3 +61,29 @@ def test_anthropic_request(monkeypatch) -> None:
         )
     )
     assert client.generate(system="system", prompt="prompt") == "anthropic result"
+
+
+def test_openai_compatible_retries_transient_failure(monkeypatch) -> None:
+    monkeypatch.setenv("TEST_API_KEY", "secret")
+    calls = 0
+
+    def fake_post(url: str, **kwargs: object) -> FakeResponse:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            request = httpx.Request("POST", url)
+            response = httpx.Response(429, request=request)
+            raise httpx.HTTPStatusError("rate limited", request=request, response=response)
+        return FakeResponse({"choices": [{"message": {"content": "result"}}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    client = OpenAICompatibleClient(
+        ModelProfile(
+            provider="openai-compatible",
+            model="model-a",
+            api_key_env="TEST_API_KEY",
+            max_retries=1,
+        )
+    )
+    assert client.generate(system="system", prompt="prompt") == "result"
+    assert calls == 2

@@ -219,6 +219,10 @@ def run(
     typer.echo(f"Skill: {skill.status} ({skill.confidence:.1%})")
     typer.echo(f"提纲：{len(outline.sections)} 节；草稿：{len(draft.sections)} 节")
     typer.echo(f"审计：{'通过' if report.passed else '存在阻断项'}")
+    typer.echo(
+        "一次生成门禁："
+        + ("达到" if report.metrics.get("one_shot_success") else "未达到，请按审计项修订")
+    )
     for output in outputs:
         typer.echo(f"输出：{output}")
     if not report.passed and not allow_failed_audit:

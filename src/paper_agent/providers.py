@@ -49,7 +49,13 @@ class ModelClient(ABC):
         raise NotImplementedError
 
     def generate_json(self, *, system: str, prompt: str) -> dict[str, Any]:
-        return extract_json(self.generate(system=system, prompt=prompt))
+        last_error: ModelError | None = None
+        for _ in range(self.profile.max_retries + 1):
+            try:
+                return extract_json(self.generate(system=system, prompt=prompt))
+            except ModelError as exc:
+                last_error = exc
+        raise last_error or ModelError("模型未返回有效 JSON")
 
 
 class OpenAICompatibleClient(ModelClient):
@@ -65,11 +71,11 @@ class OpenAICompatibleClient(ModelClient):
             "temperature": self.profile.temperature,
         }
         try:
-            response = httpx.post(
+            response = _post_with_retries(
+                self.profile,
                 f"{base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}"},
                 json=payload,
-                timeout=self.profile.timeout_seconds,
             )
             response.raise_for_status()
             return str(response.json()["choices"][0]["message"]["content"])
@@ -89,14 +95,14 @@ class AnthropicClient(ModelClient):
             "max_tokens": 8192,
         }
         try:
-            response = httpx.post(
+            response = _post_with_retries(
+                self.profile,
                 f"{base_url}/v1/messages",
                 headers={
                     "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                 },
                 json=payload,
-                timeout=self.profile.timeout_seconds,
             )
             response.raise_for_status()
             content = response.json()["content"]
@@ -145,6 +151,26 @@ def _api_key(profile: ModelProfile) -> str:
     if not value:
         raise ModelError(f"环境变量 {profile.api_key_env} 未设置")
     return value
+
+
+def _post_with_retries(profile: ModelProfile, url: str, **kwargs: Any) -> httpx.Response:
+    """Retry only transient transport, throttling, and server failures."""
+    last_error: httpx.HTTPError | None = None
+    for attempt in range(profile.max_retries + 1):
+        try:
+            response = httpx.post(url, timeout=profile.timeout_seconds, **kwargs)
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            last_error = exc
+            status = exc.response.status_code
+            if status not in {408, 409, 429} and status < 500:
+                raise
+        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            last_error = exc
+        if attempt >= profile.max_retries:
+            break
+    raise last_error or ModelError("模型请求失败")
 
 
 def create_client(profile: ModelProfile) -> ModelClient:

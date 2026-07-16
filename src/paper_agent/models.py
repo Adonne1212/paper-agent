@@ -117,6 +117,7 @@ class EvidenceCard(BaseModel):
     location: str
     excerpt: str
     summary: str
+    keywords: list[str] = Field(default_factory=list)
     source_located: bool = True
     bibliographic_verified: bool = False
 
@@ -126,6 +127,10 @@ class OutlineSection(BaseModel):
     title: str
     purpose: str
     target_words: int
+    claims: list[str] = Field(default_factory=list)
+    rhetorical_moves: list[str] = Field(default_factory=list)
+    counterargument: str | None = None
+    evidence_gap: str | None = None
     evidence_ids: list[str] = Field(default_factory=list)
     subsections: list[OutlineSection] = Field(default_factory=list)
 
@@ -188,6 +193,7 @@ class ModelProfile(BaseModel):
     api_key_env: str | None = None
     temperature: float = Field(default=0.3, ge=0, le=2)
     timeout_seconds: float = Field(default=120, gt=0)
+    max_retries: int = Field(default=2, ge=0, le=5)
 
 
 class WorkspaceState(BaseModel):

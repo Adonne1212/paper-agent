@@ -69,3 +69,22 @@ def test_valid_evidence_passes_blocker_gate() -> None:
     )
     report = audit_draft(draft, outline, [evidence], [])
     assert report.passed
+
+
+def test_audit_reports_completion_and_section_development() -> None:
+    outline = Outline(
+        research_question="问题",
+        thesis="论点",
+        total_words=1000,
+        sections=[OutlineSection(id="S1", title="分析", purpose="分析", target_words=1000)],
+    )
+    draft = Draft(
+        title="题目",
+        model="test",
+        sections=[DraftSection(section_id="S1", title="分析", content="内容很短。")],
+    )
+    report = audit_draft(draft, outline, [], [])
+    codes = {item.code for item in report.findings}
+    assert "draft-too-short" in codes
+    assert "section-underdeveloped" in codes
+    assert report.metrics["completion_ratio"] < 0.8
