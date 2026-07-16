@@ -155,15 +155,18 @@ def audit_draft(
                 suggestion="压缩背景复述和重复观点，保留分析链条。",
             )
         )
-    for section in outline.sections:
-        actual_length = section_lengths.get(section.id, 0)
-        if actual_length < section.target_words * 0.65:
+    for planned_section in outline.sections:
+        actual_length = section_lengths.get(planned_section.id, 0)
+        if actual_length < planned_section.target_words * 0.65:
             findings.append(
                 AuditFinding(
                     code="section-underdeveloped",
                     severity=Severity.IMPORTANT,
-                    message=f"本节约 {actual_length} 字，低于规划目标 {section.target_words} 字。",
-                    location=section.title,
+                    message=(
+                        f"本节约 {actual_length} 字，"
+                        f"低于规划目标 {planned_section.target_words} 字。"
+                    ),
+                    location=planned_section.title,
                     suggestion="补全本节规划中的判断、证据解释、论证担保和适用边界。",
                 )
             )
@@ -311,19 +314,36 @@ def _one_shot_success(metrics: dict[str, object]) -> bool:
     """Strict operational gate; it is an eval signal, not a promise of a grade."""
     try:
         base_ok = (
-            int(metrics.get("blockers", 0)) == 0
-            and int(metrics.get("important", 0)) == 0
-            and int(metrics.get("sections_written", 0)) == int(metrics.get("sections_expected", 0))
-            and 0.8 <= float(metrics.get("completion_ratio", 0)) <= 1.25
-            and int(metrics.get("unresolved_placeholders", 0)) == 0
-            and int(metrics.get("unsupported_numeric_paragraphs", 0)) == 0
+            _metric_int(metrics, "blockers") == 0
+            and _metric_int(metrics, "important") == 0
+            and _metric_int(metrics, "sections_written")
+            == _metric_int(metrics, "sections_expected")
+            and 0.8 <= _metric_float(metrics, "completion_ratio") <= 1.25
+            and _metric_int(metrics, "unresolved_placeholders") == 0
+            and _metric_int(metrics, "unsupported_numeric_paragraphs") == 0
         )
     except (TypeError, ValueError):
         return False
     scores = metrics.get("quality_scores")
     if isinstance(scores, dict) and len(scores) == 6:
         try:
-            return base_ok and all(int(value) >= 70 for value in scores.values())
+            return base_ok and all(_number(value) >= 70 for value in scores.values())
         except (TypeError, ValueError):
             return False
     return False
+
+
+def _metric_int(metrics: dict[str, object], key: str) -> int:
+    return int(_number(metrics.get(key, 0)))
+
+
+def _metric_float(metrics: dict[str, object], key: str) -> float:
+    return _number(metrics.get(key, 0))
+
+
+def _number(value: object) -> float:
+    if isinstance(value, bool):
+        return float(int(value))
+    if isinstance(value, int | float | str):
+        return float(value)
+    raise TypeError("metric is not numeric")

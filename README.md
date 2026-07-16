@@ -71,6 +71,18 @@ paper-agent run -p my-paper `
   --api-key-env OPENAI_API_KEY
 ```
 
+同一次运行可以让分析、规划、写作和评估使用不同模型：
+
+```powershell
+paper-agent run -p my-paper `
+  --provider openai-compatible `
+  --model FALLBACK_MODEL `
+  --api-key-env FALLBACK_API_KEY `
+  --model-config models.json
+```
+
+`models.json` 的角色配置、供应商切换和检查点失效规则见 [运行时与恢复](docs/runtime-and-recovery.md)。模型或网络调用中断后，重复同一命令会复用输入指纹和产物哈希都匹配的已完成阶段，不会重新支付全部生成成本。
+
 Anthropic：
 
 ```powershell
@@ -150,6 +162,7 @@ my-paper/
 - [需求追踪](docs/requirements-traceability.md)
 - [Writing Skill 格式](docs/writing-skill.md)
 - [模型配置](docs/model-providers.md)
+- [运行时、模型路由与检查点恢复](docs/runtime-and-recovery.md)
 - [安全策略](SECURITY.md)
 
 ## 许可证

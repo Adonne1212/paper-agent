@@ -19,6 +19,8 @@ from paper_agent.models import (
     Outline,
     ProjectConfig,
 )
+from paper_agent.providers import ModelRole
+from paper_agent.runtime import RunManifest
 from paper_agent.storage import ProjectStore
 from paper_agent.workflow import Workflow
 
@@ -68,8 +70,25 @@ def _workflow(
     model: str,
     base_url: str | None,
     api_key_env: str | None,
+    model_config: Path | None = None,
 ) -> Workflow:
-    return Workflow(ProjectStore(project), _profile(provider, model, base_url, api_key_env))
+    routes: dict[ModelRole, ModelProfile] = {}
+    if model_config:
+        raw = json.loads(model_config.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("模型路由配置顶层必须是 JSON 对象。")
+        for name, value in raw.items():
+            try:
+                role = ModelRole(name)
+            except ValueError as exc:
+                allowed = ", ".join(item.value for item in ModelRole)
+                raise ValueError(f"未知模型角色 {name}；允许值：{allowed}") from exc
+            routes[role] = ModelProfile.model_validate(value)
+    return Workflow(
+        ProjectStore(project),
+        _profile(provider, model, base_url, api_key_env),
+        routes,
+    )
 
 
 def _print_error(message: str) -> None:
@@ -174,6 +193,25 @@ def status(
     counts: dict[str, int] = {}
     for document in documents:
         counts[document.role.value] = counts.get(document.role.value, 0) + 1
+    manifest_path = store.state_dir / "runs" / "latest.json"
+    runtime: dict[str, object] | None = None
+    if manifest_path.exists():
+        manifest = store.read_model(manifest_path, RunManifest)
+        runtime = {
+            "run_id": manifest.run_id,
+            "pipeline_version": manifest.pipeline_version,
+            "model_routes": manifest.model_routes,
+            "stages": {
+                name: {
+                    "status": record.status.value,
+                    "attempts": record.attempts,
+                    "reused": record.reused,
+                    "model": record.model_label,
+                    "error": record.error_message,
+                }
+                for name, record in manifest.stages.items()
+            },
+        }
     typer.echo(
         json.dumps(
             {
@@ -189,6 +227,7 @@ def status(
                     "draft": state.draft_path,
                     "audit": state.audit_path,
                 },
+                "runtime": runtime,
             },
             ensure_ascii=False,
             indent=2,
@@ -205,12 +244,16 @@ def run(
     api_key_env: Annotated[
         str | None, typer.Option(help="保存 API Key 的环境变量名；不要直接传入密钥。")
     ] = None,
+    model_config: Annotated[
+        Path | None,
+        typer.Option(help="按 analysis/planning/writing/evaluation 路由模型的 JSON 文件。"),
+    ] = None,
     allow_failed_audit: Annotated[
         bool, typer.Option(help="即使审计有 blocker 也保留导出；默认仍返回失败退出码。")
     ] = False,
 ) -> None:
     """自动执行 Skill → 证据 → 提纲 → 草稿 → 审计 → Markdown/DOCX。"""
-    workflow = _workflow(project, provider, model, base_url, api_key_env)
+    workflow = _workflow(project, provider, model, base_url, api_key_env, model_config)
     try:
         skill, outline, draft, report, outputs = workflow.run()
     except (OSError, ValueError, RuntimeError) as exc:

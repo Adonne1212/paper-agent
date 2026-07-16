@@ -4,6 +4,7 @@ import pytest
 
 from paper_agent.ingest import ingest_document
 from paper_agent.models import DocumentRole, Genre, ModelProfile, ProjectConfig
+from paper_agent.runtime import RunManifest
 from paper_agent.storage import ProjectStore
 from paper_agent.workflow import Workflow
 
@@ -66,6 +67,21 @@ def test_end_to_end_offline_workflow(tmp_path: Path) -> None:
     assert all(path.exists() and path.stat().st_size > 0 for path in outputs)
     assert outputs[1].suffix == ".docx"
     assert store.require().current_stage == "exported"
+
+    workflow.run()
+    manifest = store.read_model(store.state_dir / "runs" / "latest.json", RunManifest)
+    expected = {
+        "assignment",
+        "skill",
+        "evidence",
+        "outline",
+        "draft-initial",
+        "audit-initial",
+        "revision",
+        "audit-final",
+    }
+    assert expected <= manifest.stages.keys()
+    assert all(manifest.stages[name].reused >= 1 for name in expected)
 
 
 def test_survey_report_requires_real_data(tmp_path: Path) -> None:

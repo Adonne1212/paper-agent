@@ -63,7 +63,7 @@ def _blocks_from_plain(text: str, *, markdown: bool) -> list[TextBlock]:
 
 
 def _parse_docx(path: Path) -> tuple[list[TextBlock], list[str]]:
-    document = DocxDocument(path)
+    document = DocxDocument(str(path))
     blocks: list[TextBlock] = []
     current_heading: str | None = None
     warnings: list[str] = []

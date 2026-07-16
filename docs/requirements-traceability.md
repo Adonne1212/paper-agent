@@ -6,13 +6,14 @@
 |---|---|---|---|
 | 单独目录，不阅读和依赖原杂项内容 | 项目限定在 `paper-agent/`，规划独立 Git 仓库 | TASKS M0 | 仓库依赖、测试夹具和构建过程不引用父目录文件 |
 | 命令行工具 | Typer CLI、console script 与非交互命令 | TASKS M0、M6 | wheel 安装后运行 `paper-agent --help` 及端到端 `run` |
-| 支持多模型切换 | 供应商无关 `ModelClient`，OpenAI-compatible、本地兼容 endpoint 与 Anthropic 客户端 | TASKS M1 | 两类协议 mock 契约测试；provider/model 均由 CLI 参数选择 |
+| 支持多模型切换 | 供应商无关 `ModelClient` + 按 analysis/planning/writing/evaluation 路由的 `ModelRouter`；OpenAI-compatible、本地兼容 endpoint 与 Anthropic 客户端 | TASKS M1 | 两类协议 mock 契约测试；单模型后备和 `--model-config` 跨角色覆盖测试 |
 | 主要面向中文论文 | 中文默认界面、中文 Prompt、Genre Profile 与通用中文 DOCX | TASKS M2、M6 | wheel smoke 的 Markdown/DOCX 中文编码检查通过 |
 | 覆盖通识结课论文、综述、调研报告、本科毕业论文 | 四种 Genre Profile 与独立章节目的、比例和数据规则 | TASKS M2、M5 | 四类 Profile 完整性测试；通识论文完整端到端测试；调研数据门禁测试 |
 | 输入 DOCX、文字版 PDF、Markdown、TXT | 四种解析路径和统一 `Document`/`TextBlock` | TASKS M2 | 四条解析测试，文字 PDF 保留页码，Markdown 保留标题 |
 | 暂不支持扫描 PDF | 扫描件检测与明确错误，不静默解析 | TASKS M2 | 扫描 PDF 夹具返回可操作提示 |
 | 上传一定数量优秀案例后自动总结 Skill | 最低三篇、多案例结构一致性、风格统计、语义规则证据过滤与置信门禁 | TASKS M3 | 三案例生成结构化、带案例 ID 证据且状态为 ready 的 Skill |
 | 自动按工作流开始写作 | `run` 编排 Skill、规划、写作、审计和导出 | TASKS M6 | 一条命令从案例与资料生成草稿和审计报告 |
+| 中断后可继续且避免重复成本 | 阶段输入指纹、产物哈希、失败清单与八阶段检查点 | v0.3 runtime | 相同输入二次运行全部复用；输入变化、产物篡改和失败状态测试 |
 | 增强普适性 | 内置体裁后备规则与案例自适应 Skill 分层；结构只学习跨案例稳定项，语义规则至少需两个案例 ID 支持 | TASKS M3、M7 | 样本数、结构一致性和规则证据共同参与门禁；正式跨学科基准列为后续工作 |
 | 尽可能生成高完成度草稿 | 分节判断/修辞动作/证据合同 → 全局连续性起草 → 确定性审计 + 独立六维量表 → 定向修订 → 再审计 | TASKS M4、M5 | 四体裁成功合同测试、篇幅/分节/来源门禁；真实成功率按重复试验和人工盲评协议报告 |
 | 不伪造来源、数据和调研过程 | 来源台账、Evidence ID、真实性门禁和未核验占位 | TASKS M4、M5 | 假 DOI、假数据和缺失调研材料的故障测试被阻断 |

@@ -3,7 +3,13 @@ import json
 import httpx
 
 from paper_agent.models import ModelProfile
-from paper_agent.providers import AnthropicClient, OpenAICompatibleClient, extract_json
+from paper_agent.providers import (
+    AnthropicClient,
+    ModelRole,
+    OpenAICompatibleClient,
+    create_router,
+    extract_json,
+)
 
 
 class FakeResponse:
@@ -87,3 +93,19 @@ def test_openai_compatible_retries_transient_failure(monkeypatch) -> None:
     )
     assert client.generate(system="system", prompt="prompt") == "result"
     assert calls == 2
+
+
+def test_model_router_can_use_different_models_by_workflow_role() -> None:
+    router = create_router(
+        ModelProfile(provider="deterministic", model="default"),
+        {
+            ModelRole.PLANNING: ModelProfile(provider="deterministic", model="planner"),
+            ModelRole.WRITING: ModelProfile(provider="deterministic", model="writer"),
+            ModelRole.EVALUATION: ModelProfile(provider="deterministic", model="reviewer"),
+        },
+    )
+
+    assert router.for_role(ModelRole.ANALYSIS).label == "deterministic:default"
+    assert router.for_role(ModelRole.PLANNING).label == "deterministic:planner"
+    assert router.for_role(ModelRole.WRITING).label == "deterministic:writer"
+    assert router.for_role(ModelRole.EVALUATION).label == "deterministic:reviewer"

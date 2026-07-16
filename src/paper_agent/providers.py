@@ -4,6 +4,7 @@ import json
 import os
 import re
 from abc import ABC, abstractmethod
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -13,6 +14,13 @@ from paper_agent.models import ModelProfile
 
 class ModelError(RuntimeError):
     pass
+
+
+class ModelRole(StrEnum):
+    ANALYSIS = "analysis"
+    PLANNING = "planning"
+    WRITING = "writing"
+    EVALUATION = "evaluation"
 
 
 def extract_json(text: str) -> dict[str, Any]:
@@ -56,6 +64,24 @@ class ModelClient(ABC):
             except ModelError as exc:
                 last_error = exc
         raise last_error or ModelError("模型未返回有效 JSON")
+
+
+class ModelRouter:
+    """Route workflow responsibilities to independently configurable model clients."""
+
+    def __init__(
+        self,
+        default: ModelClient,
+        routes: dict[ModelRole, ModelClient] | None = None,
+    ):
+        self.default = default
+        self.routes = dict(routes or {})
+
+    def for_role(self, role: ModelRole) -> ModelClient:
+        return self.routes.get(role, self.default)
+
+    def labels(self) -> dict[str, str]:
+        return {role.value: self.for_role(role).label for role in ModelRole}
 
 
 class OpenAICompatibleClient(ModelClient):
@@ -182,3 +208,11 @@ def create_client(profile: ModelProfile) -> ModelClient:
     if provider in {"deterministic", "offline"}:
         return DeterministicClient(profile)
     raise ModelError(f"未知模型供应商：{profile.provider}")
+
+
+def create_router(
+    default_profile: ModelProfile,
+    route_profiles: dict[ModelRole, ModelProfile] | None = None,
+) -> ModelRouter:
+    clients = {role: create_client(profile) for role, profile in (route_profiles or {}).items()}
+    return ModelRouter(create_client(default_profile), clients)

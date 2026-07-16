@@ -57,11 +57,11 @@ def export_docx(draft: Draft, audit: AuditReport, output: Path) -> Path:
                 paragraph.paragraph_format.first_line_indent = Pt(24)
                 paragraph.paragraph_format.line_spacing = 1.5
 
-    document.add_page_break()
+    document.add_page_break()  # type: ignore[no-untyped-call]
     document.add_heading("生成审计摘要", level=1)
     document.add_paragraph(f"阻断检查：{'通过' if audit.passed else '未通过'}")
     for key, value in audit.metrics.items():
         document.add_paragraph(f"{key}: {value}")
     output.parent.mkdir(parents=True, exist_ok=True)
-    document.save(output)
+    document.save(str(output))
     return output
