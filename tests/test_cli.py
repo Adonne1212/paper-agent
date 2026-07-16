@@ -16,7 +16,7 @@ def test_main_help_lists_end_to_end_commands() -> None:
 def test_run_requires_explicit_model_provider() -> None:
     result = runner.invoke(app, ["run"])
     assert result.exit_code == 2
-    assert "--provider" in result.stdout
+    assert "--provider" in f"{result.stdout}{result.stderr}"
     result = runner.invoke(app, ["run", "--provider", "deterministic"])
     assert result.exit_code == 2
-    assert "--model" in result.stdout
+    assert "--model" in f"{result.stdout}{result.stderr}"

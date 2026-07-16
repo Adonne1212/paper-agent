@@ -12,6 +12,7 @@ dist/
 .release-env*/
 .release-smoke*/
 .release-artifacts*/
+.ci-env*/
 .test-tmp*/
 
 # User content and generated drafts are private by default.
