@@ -1,0 +1,63 @@
+import json
+
+import httpx
+
+from paper_agent.models import ModelProfile
+from paper_agent.providers import AnthropicClient, OpenAICompatibleClient, extract_json
+
+
+class FakeResponse:
+    def __init__(self, data: dict[str, object]):
+        self.data = data
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict[str, object]:
+        return self.data
+
+
+def test_extract_json_from_fenced_response() -> None:
+    assert extract_json('```json\n{"ok": true}\n```') == {"ok": True}
+
+
+def test_openai_compatible_request(monkeypatch) -> None:
+    monkeypatch.setenv("TEST_API_KEY", "secret")
+    captured: dict[str, object] = {}
+
+    def fake_post(url: str, **kwargs: object) -> FakeResponse:
+        captured["url"] = url
+        captured.update(kwargs)
+        return FakeResponse({"choices": [{"message": {"content": "result"}}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    client = OpenAICompatibleClient(
+        ModelProfile(
+            provider="openai-compatible",
+            model="model-a",
+            base_url="https://provider.example/v1",
+            api_key_env="TEST_API_KEY",
+        )
+    )
+    assert client.generate(system="system", prompt="prompt") == "result"
+    assert captured["url"] == "https://provider.example/v1/chat/completions"
+    assert "secret" not in json.dumps(captured.get("json"))
+
+
+def test_anthropic_request(monkeypatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_TEST_KEY", "secret")
+
+    def fake_post(url: str, **kwargs: object) -> FakeResponse:
+        assert url == "https://api.anthropic.com/v1/messages"
+        assert kwargs["headers"]["x-api-key"] == "secret"  # type: ignore[index]
+        return FakeResponse({"content": [{"type": "text", "text": "anthropic result"}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    client = AnthropicClient(
+        ModelProfile(
+            provider="anthropic",
+            model="model-b",
+            api_key_env="ANTHROPIC_TEST_KEY",
+        )
+    )
+    assert client.generate(system="system", prompt="prompt") == "anthropic result"

@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.mypy_cache/
+.pytest_cache/
+pytest-cache-files-*/
+.ruff_cache/
+.venv/
+build/
+dist/
+.release-env*/
+.release-smoke*/
+.release-artifacts*/
+.test-tmp*/
+
+# User content and generated drafts are private by default.
+.paper-agent/
+outputs/
+*.env
+.env*
+!.env.example
