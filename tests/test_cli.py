@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from paper_agent.cli import _workflow, app
@@ -21,12 +22,15 @@ def test_main_help_lists_end_to_end_commands() -> None:
 
 
 def test_run_requires_explicit_model_provider() -> None:
+    command = typer.main.get_command(app)
+    run_command = command.commands["run"]  # type: ignore[attr-defined]
+    required = {param.name for param in run_command.params if getattr(param, "required", False)}
+    assert {"provider", "model"} <= required
+
     result = runner.invoke(app, ["run"])
     assert result.exit_code == 2
-    assert "--provider" in f"{result.stdout}{result.stderr}"
     result = runner.invoke(app, ["run", "--provider", "deterministic"])
     assert result.exit_code == 2
-    assert "--model" in f"{result.stdout}{result.stderr}"
 
 
 def test_model_config_routes_independent_models(tmp_path: Path) -> None:
